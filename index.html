@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Towards Adv.">
+<meta name="theme-color" content="#BB1919">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Towards Advanced</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --red: #BB1919; --red2: #E8201F;
+  --cream: #F5F0E8; --ink: #1A1612; --muted: #7A6F65;
+  --done: #2A7A4B; --done-bg: #E6F4EC;
+  --card: #fff; --border: #E2DDD5;
+  --nav-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overscroll-behavior: none; }
+body {
+  font-family: 'DM Mono', monospace;
+  background: var(--cream);
+  color: var(--ink);
+  /* Leave room for bottom nav + safe area */
+  padding-bottom: calc(var(--nav-h) + var(--safe-b));
+}
+
+/* ── STATUS BAR SPACER (iOS notch) ── */
+.status-bar { height: var(--safe-t); background: var(--red); }
+
+/* ── TOP HEADER ── */
+.top-bar {
+  background: var(--red);
+  padding: 0 20px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: var(--safe-t);
+  z-index: 50;
+  box-shadow: 0 2px 12px rgba(187,25,25,.4);
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-box {
+  background: #fff; color: var(--red);
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 10px; padding: 3px 6px; line-height: 1.25;
+  border-radius: 3px; letter-spacing: .03em;
+}
+.logo-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; color: #fff; }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,.35); transition: background .3s;
+}
+.sync-dot.ok  { background: #4ade80; }
+.sync-dot.ing { background: #fbbf24; animation: blink 1s infinite; }
+.sync-dot.err { background: #f87171; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+.icon-btn {
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.25);
+  color: #fff; border-radius: 8px; padding: 6px 10px;
+  font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer;
+  transition: background .15s; line-height: 1;
+}
+.icon-btn:hover { background: rgba(255,255,255,.28); }
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── TODAY PAGE ── */
+.today-hero {
+  background: var(--ink); color: #fff;
+  padding: 24px 20px 20px;
+}
+.hero-eyebrow {
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--red2); margin-bottom: 8px;
+}
+.hero-unit {
+  font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800;
+  line-height: 1.15; margin-bottom: 4px;
+}
+.hero-sub { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 20px; line-height: 1.5; }
+
+/* 4 session tiles */
+.sess-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sess-tile {
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 14px 12px; text-decoration: none; color: #fff;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: all .18s; position: relative; cursor: pointer;
+}
+.sess-tile:active { transform: scale(.97); }
+.sess-tile.today  { background: var(--red2); border-color: var(--red2); box-shadow: 0 4px 18px rgba(232,32,31,.45); }
+.sess-tile.done   { background: rgba(42,122,75,.22); border-color: rgba(42,122,75,.35); }
+.tile-n { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; line-height: 1; }
+.tile-label { font-size: 11px; opacity: .75; }
+.tile-check {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--done); color: #fff; border-radius: 50%;
+  width: 18px; height: 18px; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Progress ring */
+.hero-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+.ring-wrap { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-bg  { fill: none; stroke: rgba(255,255,255,.1); stroke-width: 6; }
+.ring-fg  { fill: none; stroke: var(--red2); stroke-width: 6; stroke-linecap: round;
+            transition: stroke-dashoffset .7s cubic-bezier(.4,0,.2,1); }
+.ring-lbl {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; color: #fff; line-height: 1;
+}
+.ring-lbl span { font-size: 8px; color: rgba(255,255,255,.4); margin-top: 1px; font-family:'DM Mono',monospace; }
+.hero-stats { flex: 1; padding-left: 16px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+.stat-label { color: rgba(255,255,255,.45); }
+.stat-val   { color: #fff; font-weight: 500; }
+
+/* ── STREAK BANNER ── */
+.streak-banner {
+  margin: 16px 20px 0;
+  background: linear-gradient(135deg, #1A1612 0%, #2d2520 100%);
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid rgba(255,255,255,.07);
+}
+.streak-fire { font-size: 28px; line-height: 1; }
+.streak-text { flex: 1; }
+.streak-n { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: #fff; }
+.streak-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+/* ── UPCOMING ── */
+.section-head {
+  padding: 20px 20px 10px;
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.upcoming-list { padding: 0 20px; display: flex; flex-direction: column; gap: 8px; }
+.upcoming-row {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; color: var(--ink); cursor: pointer;
+  transition: box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.upcoming-row:active { background: var(--cream); }
+.upcoming-row.is-today { border-color: var(--red); }
+.upc-day { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; min-width: 32px; }
+.upc-day.today { color: var(--red); }
+.upc-info { flex: 1; }
+.upc-unit { font-size: 12px; font-weight: 500; }
+.upc-topic { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.upc-arrow { color: var(--muted); font-size: 14px; }
+
+/* ── UNITS PAGE ── */
+.search-bar {
+  padding: 14px 20px 0;
+  position: sticky; top: calc(56px + var(--safe-t)); z-index: 10; background: var(--cream);
+  padding-bottom: 10px;
+}
+.search-input {
+  width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px 10px 36px; font-family: 'DM Mono', monospace; font-size: 14px;
+  background: var(--card); color: var(--ink); outline: none;
+  transition: border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237A6F65' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 12px center;
+}
+.search-input:focus { border-color: var(--red); }
+
+.filter-row { display: flex; gap: 8px; padding: 10px 20px 0; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.pill-filter {
+  flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--card);
+  font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.pill-filter.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.units-list { padding: 12px 20px 0; display: flex; flex-direction: column; gap: 8px; }
+.unit-row {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; transition: box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.unit-row.active-unit { border-color: var(--red); box-shadow: 0 0 0 2px var(--red); }
+.unit-row.complete    { border-color: var(--done); }
+.unit-row.hidden      { display: none; }
+.unit-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer;
+}
+.unit-num {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px;
+  color: var(--border); min-width: 36px;
+}
+.unit-row.active-unit .unit-num { color: var(--red); }
+.unit-row.complete    .unit-num { color: var(--done); }
+.unit-topic { flex: 1; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; line-height: 1.35; }
+.unit-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; flex-shrink: 0; }
+.b-today { background: var(--red); color: #fff; }
+.b-done  { background: var(--done-bg); color: var(--done); }
+.unit-parts { display: flex; border-top: 1px solid var(--border); }
+.part-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 4px 8px; background: none; border: none; border-right: 1px solid var(--border);
+  cursor: pointer; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px;
+  transition: background .15s; position: relative; -webkit-tap-highlight-color: transparent;
+}
+.part-btn:last-child { border-right: none; }
+.part-btn:active { background: var(--cream); }
+.part-btn.p-today { background: #FFF0F0; color: var(--red); }
+.part-btn.p-done  { background: var(--done-bg); color: var(--done); }
+.part-n { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1; }
+.part-tick { position: absolute; top: 3px; right: 3px; font-size: 9px; color: var(--done); }
+
+/* ── PROGRESS PAGE ── */
+.progress-page { padding: 20px; }
+.progress-card {
+  background: var(--ink); color: #fff; border-radius: 16px;
+  padding: 24px; margin-bottom: 16px;
+}
+.prog-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+.big-ring-wrap { display: flex; align-items: center; gap: 20px; }
+.big-ring { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+.big-ring svg { transform: rotate(-90deg); }
+.big-ring-lbl {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; color: #fff;
+}
+.big-ring-lbl span { font-size: 10px; color: rgba(255,255,255,.4); font-family:'DM Mono',monospace; }
+.prog-stats { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.pstat { display: flex; flex-direction: column; }
+.pstat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; }
+.pstat-lbl { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 1px; }
+
+.units-progress { display: flex; flex-direction: column; gap: 8px; }
+.up-row {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+}
+.up-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: var(--border); min-width: 28px; }
+.up-num.done-all { color: var(--done); }
+.up-topic { flex: 1; font-size: 12px; line-height: 1.4; }
+.up-dots { display: flex; gap: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--border); }
+.dot.filled { background: var(--done); border-color: var(--done); }
+
+/* ── SETTINGS PAGE ── */
+.settings-page { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.settings-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden;
+}
+.settings-card h3 {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+}
+.setting-row {
+  display: flex; align-items: center; padding: 12px 16px;
+  border-bottom: 1px solid var(--border); gap: 12px;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { flex: 1; font-size: 13px; }
+.setting-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.setting-row input[type="date"] {
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 7px 10px; font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--ink); background: var(--cream); outline: none;
+}
+.setting-row input[type="password"],
+.setting-row input[type="text"] {
+  flex: 1; border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 10px; font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--ink); background: var(--cream); outline: none; min-width: 0;
+}
+.setting-row input:focus { border-color: var(--red); }
+.setting-action {
+  width: 100%; background: var(--red); color: #fff; border: none;
+  padding: 13px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: background .15s;
+}
+.setting-action:hover { background: var(--red2); }
+.setting-action.danger {
+  background: none; color: #e53535; border-top: 1px solid var(--border);
+  font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace;
+}
+.steps-list { padding: 0 16px 14px; list-style: none; counter-reset: s; }
+.steps-list li {
+  counter-increment: s; display: flex; gap: 10px; align-items: flex-start;
+  margin-top: 10px; font-size: 12px; color: var(--ink); line-height: 1.6;
+}
+.steps-list li::before {
+  content: counter(s); background: var(--red); color: #fff; border-radius: 50%;
+  min-width: 20px; height: 20px; font-family:'Syne',sans-serif; font-weight:800; font-size:11px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.steps-list li a { color: var(--red); text-decoration: none; }
+.steps-list li code { background: var(--cream); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + var(--safe-b));
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-top: 1px solid var(--border);
+  display: flex; z-index: 100;
+  padding-bottom: var(--safe-b);
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; background: none; border: none; cursor: pointer;
+  color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px;
+  transition: color .15s; -webkit-tap-highlight-color: transparent;
+  padding-bottom: 2px;
+}
+.nav-btn.active { color: var(--red); }
+.nav-icon { font-size: 20px; line-height: 1; }
+.nav-label { font-size: 10px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + var(--safe-b) + 12px); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink); color: #fff; border-radius: 20px;
+  padding: 8px 18px; font-size: 12px; opacity: 0;
+  transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; z-index: 200;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="status-bar"></div>
+
+<!-- TOP BAR -->
+<header class="top-bar">
+  <div class="logo">
+    <div class="logo-box">BBC<br>LE</div>
+    <span class="logo-name">Towards Advanced</span>
+  </div>
+  <div class="top-right">
+    <div class="sync-dot" id="sync-dot"></div>
+    <button class="icon-btn" onclick="manualSync()">↻</button>
+  </div>
+</header>
+
+<!-- ── PAGE: TODAY ── -->
+<div class="page active" id="page-today">
+
+  <div class="today-hero">
+    <div class="hero-eyebrow" id="hero-eyebrow">Today · –</div>
+    <div class="hero-unit" id="hero-unit">–</div>
+    <div class="hero-sub" id="hero-sub">Loading…</div>
+    <div class="sess-tiles" id="sess-tiles"></div>
+
+    <div class="hero-footer">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          <circle class="ring-bg" cx="32" cy="32" r="26"/>
+          <circle class="ring-fg" id="ring-fg" cx="32" cy="32" r="26"
+            stroke-dasharray="163.36" stroke-dashoffset="163.36"/>
+        </svg>
+        <div class="ring-lbl"><span id="ring-pct">0%</span><span>done</span></div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-row"><span class="stat-label">Completed</span><span class="stat-val" id="stat-done">0 / 120</span></div>
+        <div class="stat-row"><span class="stat-label">Streak</span><span class="stat-val" id="stat-streak">– days</span></div>
+        <div class="stat-row"><span class="stat-label">Est. finish</span><span class="stat-val" id="stat-finish">–</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">Upcoming</div>
+  <div class="upcoming-list" id="upcoming-list"></div>
+</div>
+
+<!-- ── PAGE: UNITS ── -->
+<div class="page" id="page-units">
+  <div class="search-bar">
+    <input class="search-input" type="search" id="search-box" placeholder="Search topics…" oninput="applyFilters()">
+  </div>
+  <div class="filter-row">
+    <button class="pill-filter active" onclick="setFilter(this,'all')">All 30</button>
+    <button class="pill-filter" onclick="setFilter(this,'todo')">To Do</button>
+    <button class="pill-filter" onclick="setFilter(this,'done')">Completed</button>
+  </div>
+  <div class="units-list" id="units-list"></div>
+</div>
+
+<!-- ── PAGE: PROGRESS ── -->
+<div class="page" id="page-progress">
+  <div class="progress-page">
+    <div class="progress-card">
+      <div class="prog-title">Your Progress</div>
+      <div class="big-ring-wrap">
+        <div class="big-ring">
+          <svg viewBox="0 0 100 100" width="100" height="100">
+            <circle fill="none" stroke="rgba(255,255,255,.1)" stroke-width="8" cx="50" cy="50" r="42"/>
+            <circle fill="none" stroke="#E8201F" stroke-width="8" stroke-linecap="round"
+              cx="50" cy="50" r="42" id="big-ring-fg"
+              stroke-dasharray="263.89" stroke-dashoffset="263.89"
+              style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)"/>
+          </svg>
+          <div class="big-ring-lbl"><span id="big-pct">0%</span><span>done</span></div>
+        </div>
+        <div class="prog-stats">
+          <div class="pstat"><span class="pstat-val" id="ps-done">0</span><span class="pstat-lbl">sessions done</span></div>
+          <div class="pstat"><span class="pstat-val" id="ps-units">0</span><span class="pstat-lbl">units complete</span></div>
+          <div class="pstat"><span class="pstat-val" id="ps-streak">0</span><span class="pstat-lbl">day streak</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="section-head" style="padding:0 0 10px">Unit Breakdown</div>
+    <div class="units-progress" id="units-progress"></div>
+  </div>
+</div>
+
+<!-- ── PAGE: SETTINGS ── -->
+<div class="page" id="page-settings">
+  <div class="settings-page">
+
+    <div class="settings-card">
+      <h3>Study Schedule</h3>
+      <div class="setting-row">
+        <div class="setting-label">
+          Course start date
+          <div class="setting-sub">Used to calculate today's session</div>
+        </div>
+        <input type="date" id="s-date" onchange="saveStartDate()">
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <h3>Cross-Device Sync</h3>
+      <ol class="steps-list">
+        <li>Go to <a href="https://github.com/settings/tokens/new" target="_blank">GitHub → Settings → Developer settings → Personal access tokens (classic)</a></li>
+        <li>Name it <code>bbc-companion</code>, tick only the <code>gist</code> scope</li>
+        <li>Click <strong>Generate token</strong> and paste it below</li>
+      </ol>
+      <div class="setting-row">
+        <input type="password" id="s-token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      </div>
+      <button class="setting-action" onclick="saveSync()">Connect &amp; Sync →</button>
+    </div>
+
+    <div class="settings-card">
+      <h3>Sync Status</h3>
+      <div class="setting-row">
+        <div class="setting-label">
+          <span id="sync-status-text">Not configured</span>
+          <div class="setting-sub" id="sync-gist-id">–</div>
+        </div>
+        <button class="icon-btn" style="background:var(--cream);border-color:var(--border);color:var(--ink)" onclick="manualSync()">↻ Sync now</button>
+      </div>
+      <button class="setting-action danger" onclick="resetProgress()">Reset all progress</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb-today" onclick="navigate('today')">
+    <span class="nav-icon">📅</span>
+    <span class="nav-label">Today</span>
+  </button>
+  <button class="nav-btn" id="nb-units" onclick="navigate('units')">
+    <span class="nav-icon">📚</span>
+    <span class="nav-label">Units</span>
+  </button>
+  <button class="nav-btn" id="nb-progress" onclick="navigate('progress')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Progress</span>
+  </button>
+  <button class="nav-btn" id="nb-settings" onclick="navigate('settings')">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Settings</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────
+const UNITS=30,SESS=4;
+const BASE='https://www.bbc.co.uk/learningenglish/english/course/towards-advanced';
+const GIST_FILE='bbc_ta_progress.json';
+const TOPICS={1:'Talking about yourself',2:'Future forms',3:'Linking words of contrast',4:'Non-defining relative clauses',5:'Stative verbs',6:'The passive voice',7:'Reported speech',8:'Modal verbs',9:'Gerunds & infinitives',10:'Conditionals',11:'Articles & determiners',12:'Cleft sentences',13:'Adverbs & adverbials',14:'Noun phrases',15:'Inversion 1',16:'Inversion 2',17:'Mixed conditionals',18:'Emphasis & cleft sentences',19:'Discourse markers',20:'Hedging language',21:'Formal & informal register',22:'Collocation',23:'Idioms',24:'Vocabulary in context',25:'Advanced grammar review',26:'Pronunciation – stress & rhythm',27:'Pronunciation – connected speech',28:'Writing skills',29:'Listening strategies',30:'Course review & exam practice'};
+const LABELS=['Grammar','Vocabulary','Listening','Review'];
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ── STATE ────────────────────────────────────────────────────
+let state={completed:[],start_date:''};
+const ls={
+  get token(){return localStorage.getItem('ta_token')||''},
+  set token(v){localStorage.setItem('ta_token',v)},
+  get gistId(){return localStorage.getItem('ta_gist_id')||''},
+  set gistId(v){localStorage.setItem('ta_gist_id',v)},
+};
+
+// ── TOAST ────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+// ── SYNC STATUS ──────────────────────────────────────────────
+function syncDot(cls){document.getElementById('sync-dot').className='sync-dot '+cls}
+
+// ── GIST ─────────────────────────────────────────────────────
+async function gistLoad(){
+  if(!ls.token||!ls.gistId)return false;
+  syncDot('ing');
+  try{
+    const r=await fetch(`https://api.github.com/gists/${ls.gistId}`,{headers:{Authorization:`token ${ls.token}`}});
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    const c=d.files?.[GIST_FILE]?.content;
+    if(c)state=JSON.parse(c);
+    syncDot('ok'); updateSyncUI();
+    return true;
+  }catch{syncDot('err');return false}
+}
+let saveTimer;
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(gistSave,900)}
+async function gistSave(){
+  if(!ls.token)return;
+  syncDot('ing');
+  try{
+    const body={files:{[GIST_FILE]:{content:JSON.stringify(state,null,2)}}};
+    let url='https://api.github.com/gists',method='POST';
+    if(ls.gistId){url+='/'+ls.gistId;method='PATCH';}
+    else Object.assign(body,{description:'BBC Towards Advanced – progress',public:false});
+    const r=await fetch(url,{method,headers:{Authorization:`token ${ls.token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok)throw 0;
+    if(!ls.gistId){const d=await r.json();ls.gistId=d.id;}
+    syncDot('ok'); toast('Saved ✓');
+  }catch{syncDot('err');toast('Save failed — check token')}
+}
+async function manualSync(){
+  if(!ls.token){navigate('settings');toast('Add your GitHub token first');return}
+  await gistLoad();
+  refresh();
+  toast('Synced!');
+}
+
+// ── SETTINGS ACTIONS ─────────────────────────────────────────
+function saveStartDate(){
+  state.start_date=document.getElementById('s-date').value;
+  scheduleSave(); refresh(); toast('Start date saved');
+}
+async function saveSync(){
+  const t=document.getElementById('s-token').value.trim();
+  if(!t){toast('Paste your token first');return}
+  ls.token=t; syncDot('ing');
+  try{
+    const r=await fetch('https://api.github.com/gists?per_page=100',{headers:{Authorization:`token ${t}`}});
+    if(!r.ok)throw 0;
+    const gists=await r.json();
+    const found=gists.find(g=>g.files?.[GIST_FILE]);
+    if(found){ls.gistId=found.id;await gistLoad();}
+    else{await gistSave();}
+    updateSyncUI(); refresh(); toast('Sync connected ✓');
+  }catch{syncDot('err');toast('Could not connect — check token')}
+}
+function updateSyncUI(){
+  document.getElementById('sync-status-text').textContent=ls.gistId?'Connected via GitHub Gist':'Not configured';
+  document.getElementById('sync-gist-id').textContent=ls.gistId?`Gist ID: ${ls.gistId.slice(0,16)}…`:'Add your token above';
+}
+function resetProgress(){
+  if(!confirm('Reset all progress?'))return;
+  state.completed=[];
+  scheduleSave(); refresh(); toast('Progress reset');
+}
+
+// ── DATE UTILS ───────────────────────────────────────────────
+function wdBetween(a,b){
+  let n=0,d=new Date(a);d.setHours(0,0,0,0);b=new Date(b);b.setHours(0,0,0,0);
+  while(d<b){if(d.getDay()>0&&d.getDay()<6)n++;d.setDate(d.getDate()+1);}return n;
+}
+function sessionAt(dateStr){
+  if(!state.start_date)return null;
+  const s=new Date(state.start_date+'T00:00:00'),t=new Date(dateStr+'T00:00:00');
+  s.setHours(0,0,0,0);t.setHours(0,0,0,0);
+  if(t<s)return null;
+  const idx=wdBetween(s,t)%(UNITS*SESS);
+  return{unit:Math.floor(idx/SESS)+1,session:(idx%SESS)+1};
+}
+function todaySess(){return sessionAt(new Date().toISOString().split('T')[0])}
+function fmtShort(d){return`${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`}
+function fmtFull(d){return d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+function nextWeekdays(n){
+  const out=[];let d=new Date();d.setHours(0,0,0,0);
+  while(out.length<n){if(d.getDay()>0&&d.getDay()<6)out.push(new Date(d));d.setDate(d.getDate()+1);}
+  return out;
+}
+function calcStreak(){
+  if(!state.start_date||!state.completed.length)return 0;
+  let streak=0,d=new Date();d.setHours(0,0,0,0);
+  const start=new Date(state.start_date+'T00:00:00');start.setHours(0,0,0,0);
+  for(let i=0;i<365;i++){
+    if(d<start)break;
+    if(d.getDay()===0||d.getDay()===6){d.setDate(d.getDate()-1);continue}
+    const s=sessionAt(d.toISOString().split('T')[0]);
+    if(!s)break;
+    if(isDone(s.unit,s.session)){streak++;d.setDate(d.getDate()-1);}else break;
+  }
+  return streak;
+}
+function estFinish(){
+  if(!state.start_date)return'–';
+  const remaining=UNITS*SESS-state.completed.length;
+  let d=new Date(),count=0;
+  while(count<remaining){d.setDate(d.getDate()+1);if(d.getDay()>0&&d.getDay()<6)count++;}
+  return fmtShort(d);
+}
+
+// ── PROGRESS ─────────────────────────────────────────────────
+function isDone(u,s){return state.completed.includes(`${u}-${s}`)}
+function toggle(u,s){
+  const k=`${u}-${s}`,i=state.completed.indexOf(k);
+  i===-1?state.completed.push(k):state.completed.splice(i,1);
+  scheduleSave();
+  toast(i===-1?'Marked as done ✓':'Unmarked');
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────
+function navigate(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nb-'+page).classList.add('active');
+  if(page==='progress')renderProgress();
+}
+
+// ── RENDER TODAY ─────────────────────────────────────────────
+function renderToday(){
+  const cur=todaySess();
+  const done=state.completed.length,total=UNITS*SESS;
+  const pct=Math.round(done/total*100);
+  document.getElementById('ring-fg').style.strokeDashoffset=163.36-163.36*done/total;
+  document.getElementById('ring-pct').textContent=pct+'%';
+  document.getElementById('stat-done').textContent=`${done} / ${total}`;
+  document.getElementById('stat-streak').textContent=calcStreak()+' days';
+  document.getElementById('stat-finish').textContent=estFinish();
+  document.getElementById('hero-eyebrow').textContent='Today · '+fmtFull(new Date());
+
+  if(!cur){
+    document.getElementById('hero-unit').textContent='Set your start date';
+    document.getElementById('hero-sub').textContent='Go to Settings → Study Schedule';
+    document.getElementById('sess-tiles').innerHTML='';
+  }else{
+    document.getElementById('hero-unit').textContent=`Unit ${cur.unit} · ${TOPICS[cur.unit]}`;
+    document.getElementById('hero-sub').textContent=`Part ${cur.session} of ${SESS} · ${LABELS[cur.session-1]}`;
+    const tEl=document.getElementById('sess-tiles');tEl.innerHTML='';
+    for(let s=1;s<=SESS;s++){
+      const d=isDone(cur.unit,s),t=s===cur.session;
+      const a=document.createElement('a');
+      a.className='sess-tile'+(t?' today':'')+(d?' done':'');
+      a.href=`${BASE}/unit-${cur.unit}/session-${s}`;a.target='_blank';a.rel='noopener';
+      a.innerHTML=`<span class="tile-n">${s}</span><span class="tile-label">${LABELS[s-1]}</span>${d?'<span class="tile-check">✓</span>':''}`;
+      tEl.appendChild(a);
+    }
+  }
+
+  // Upcoming 5 weekdays
+  const upEl=document.getElementById('upcoming-list');upEl.innerHTML='';
+  nextWeekdays(5).forEach((d,i)=>{
+    const dateStr=d.toISOString().split('T')[0];
+    const s=sessionAt(dateStr);if(!s)return;
+    const isToday=i===0;
+    const row=document.createElement('div');
+    row.className='upcoming-row'+(isToday?' is-today':'');
+    row.onclick=()=>window.open(`${BASE}/unit-${s.unit}/session-${s.session}`,'_blank');
+    row.innerHTML=`
+      <span class="upc-day${isToday?' today':''}">${isToday?'Today':fmtShort(d).split(' ')[0]}</span>
+      <div class="upc-info">
+        <div class="upc-unit">Unit ${s.unit} · Part ${s.session} — ${LABELS[s.session-1]}</div>
+        <div class="upc-topic">${TOPICS[s.unit]}</div>
+      </div>
+      <span class="upc-arrow">›</span>`;
+    upEl.appendChild(row);
+  });
+}
+
+// ── RENDER UNITS ─────────────────────────────────────────────
+let currentFilter='all';
+function renderUnits(){
+  const list=document.getElementById('units-list');list.innerHTML='';
+  const cur=todaySess();
+  for(let u=1;u<=UNITS;u++){
+    const allDone=[1,2,3,4].every(s=>isDone(u,s));
+    const active=cur&&cur.unit===u;
+    const row=document.createElement('div');
+    row.className='unit-row'+(active?' active-unit':'')+(allDone?' complete':'');
+    row.dataset.unit=u;row.dataset.topic=TOPICS[u].toLowerCase();row.dataset.done=allDone?'1':'0';
+    const badge=active?'<span class="unit-badge b-today">Today</span>':allDone?'<span class="unit-badge b-done">✓ Done</span>':'';
+    row.innerHTML=`<div class="unit-head"><span class="unit-num">${String(u).padStart(2,'0')}</span><span class="unit-topic">${TOPICS[u]}</span>${badge}</div><div class="unit-parts" id="up${u}"></div>`;
+    list.appendChild(row);
+    const parts=document.getElementById('up'+u);
+    for(let s=1;s<=SESS;s++){
+      const d=isDone(u,s),t=cur&&cur.unit===u&&cur.session===s;
+      const btn=document.createElement('button');
+      btn.className='part-btn'+(t?' p-today':'')+(d?' p-done':'');
+      btn.innerHTML=`<span class="part-n">${s}</span><span>${LABELS[s-1]}</span>${d?'<span class="part-tick">✓</span>':''}`;
+      btn.addEventListener('click',e=>{e.stopPropagation();window.open(`${BASE}/unit-${u}/session-${s}`,'_blank')});
+      btn.addEventListener('contextmenu',e=>{e.preventDefault();toggle(u,s);refresh()});
+      // Long-press for mobile mark-done
+      let lp;
+      btn.addEventListener('touchstart',()=>{lp=setTimeout(()=>{toggle(u,s);refresh()},600)},{passive:true});
+      btn.addEventListener('touchend',()=>clearTimeout(lp));
+      btn.addEventListener('touchmove',()=>clearTimeout(lp));
+      parts.appendChild(btn);
+    }
+  }
+  applyFilters();
+}
+
+function applyFilters(){
+  const q=document.getElementById('search-box').value.toLowerCase().trim();
+  let n=0;
+  document.querySelectorAll('.unit-row').forEach(r=>{
+    const match=(!q||r.dataset.topic.includes(q)||r.dataset.unit.includes(q))
+      &&(currentFilter==='all'||(currentFilter==='done'?r.dataset.done==='1':r.dataset.done!=='1'));
+    r.classList.toggle('hidden',!match);
+    if(match)n++;
+  });
+}
+function setFilter(btn,f){
+  currentFilter=f;
+  document.querySelectorAll('.pill-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');applyFilters();
+}
+
+// ── RENDER PROGRESS PAGE ──────────────────────────────────────
+function renderProgress(){
+  const done=state.completed.length,total=UNITS*SESS;
+  const pct=Math.round(done/total*100);
+  document.getElementById('big-ring-fg').style.strokeDashoffset=263.89-263.89*done/total;
+  document.getElementById('big-pct').textContent=pct+'%';
+  document.getElementById('ps-done').textContent=done;
+  document.getElementById('ps-units').textContent=[...Array(UNITS)].filter((_,i)=>[1,2,3,4].every(s=>isDone(i+1,s))).length;
+  document.getElementById('ps-streak').textContent=calcStreak();
+  const bp=document.getElementById('units-progress');bp.innerHTML='';
+  for(let u=1;u<=UNITS;u++){
+    const allDone=[1,2,3,4].every(s=>isDone(u,s));
+    const row=document.createElement('div');row.className='up-row';
+    const dots=[1,2,3,4].map(s=>`<div class="dot${isDone(u,s)?' filled':''}"></div>`).join('');
+    row.innerHTML=`<span class="up-num${allDone?' done-all':''}">${String(u).padStart(2,'0')}</span><span class="up-topic">${TOPICS[u]}</span><div class="up-dots">${dots}</div>`;
+    bp.appendChild(row);
+  }
+}
+
+// ── RENDER SETTINGS ──────────────────────────────────────────
+function renderSettings(){
+  if(state.start_date)document.getElementById('s-date').value=state.start_date;
+  if(ls.token)document.getElementById('s-token').value=ls.token;
+  updateSyncUI();
+}
+
+function refresh(){renderToday();renderUnits();renderSettings()}
+
+// ── SERVICE WORKER ───────────────────────────────────────────
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+(async()=>{
+  if(ls.token&&ls.gistId){
+    await gistLoad();
+  }
+  refresh();
+})();
+</script>
+</body>
+</html>

@@ -2,43 +2,11 @@
 
 A PWA (Progressive Web App) companion for the BBC Learning English *Towards Advanced* course. Works on iPhone, Android, and desktop. Syncs progress across all devices via a private GitHub Gist.
 
----
 
-## 🚀 Deploy to GitHub Pages (5 minutes)
 
-### Step 1 — Create a GitHub repository
-1. Go to [github.com/new](https://github.com/new)
-2. Name it `bbc-companion` (or anything you like)
-3. Set it to **Public** (required for free GitHub Pages)
-4. Click **Create repository**
+## 📱 Install on your phone (Add to Home Screen)
 
-### Step 2 — Upload the app files
-Upload all four files from this folder:
-- `index.html`
-- `manifest.json`
-- `sw.js`
-- `icon-192.png`
-- `icon-512.png`
-- `apple-touch-icon.png`
-
-You can drag & drop them all at once on the GitHub repository page.
-
-### Step 3 — Enable GitHub Pages
-1. In your repo, go to **Settings → Pages**
-2. Under *Source*, select **Deploy from a branch**
-3. Choose **main** branch, **/ (root)** folder
-4. Click **Save**
-
-After ~1 minute, your app is live at:
-```
-https://YOUR-USERNAME.github.io/bbc-companion/
-```
-
----
-
-## 📱 Install on iPhone (Add to Home Screen)
-
-1. Open Safari on your iPhone (must be Safari, not Chrome)
+1. Open Safari on your iPhone (must be Safari, not Chrome) or with any browser on android
 2. Go to your GitHub Pages URL above
 3. Tap the **Share** button (box with arrow pointing up)
 4. Scroll down and tap **"Add to Home Screen"**
@@ -48,7 +16,7 @@ It will appear on your home screen as a full-screen app with no browser bars.
 
 ---
 
-## 🔄 Set up cross-device sync
+## 🔄 Set up cross-device syncm (optional)
 
 The app uses a **secret GitHub Gist** as a tiny personal database — free, private, and no server needed.
 
